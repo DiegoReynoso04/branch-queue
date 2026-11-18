@@ -1,5 +1,10 @@
 """Gestor de colas para las sucursales de Banco Meridional."""
 
+# Diseño: una deque por servicio (dict[str, deque[Ticket]]) para que call_next sea
+# O(1) sin depender de cuánta gente espere en otros servicios, y numeración global.
+# Un threading.Lock hace que "comprobar y retirar" sea atómico en call_next: solo se
+# anuncia un ticket ya retirado de la cola. Detalles en DESIGN.md / DESIGN.es.md.
+
 import threading
 from collections import deque
 from collections.abc import Callable
