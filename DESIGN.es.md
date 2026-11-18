@@ -202,8 +202,18 @@ cliente solo se le anuncia cuando esa reclamación ha tenido éxito.
 | Dos tickets con el mismo `issued_at` | El orden lo da la posición en la deque, que sigue al número, no a la hora. `issued_at` solo se usa para mostrar. |
 | Contador muy grande | Los `int` de Python no tienen límite superior. |
 
-Los errores inesperados no se ocultan: la CLI solo captura `InvalidServiceError`,
-`EmptyQueueError` y `ValueError`, nunca `Exception`.
+Los errores inesperados no se ocultan. La CLI solo captura estas excepciones,
+en tres bloques `try`, y nunca `Exception`, así que un bug real sigue mostrando
+su traceback:
+
+- **`run()`, alrededor de cada acción del menú:** `InvalidServiceError`, luego
+  `EmptyQueueError` y luego `ValueError`. `InvalidServiceError` tiene que ir
+  antes que `ValueError` porque es una subclase de `ValueError`. En el orden
+  inverso, el `except ValueError` la capturaría primero.
+- **`_ask_service()`:** `InvalidServiceError`, para mostrar el error y volver a
+  pedir el servicio.
+- **`run()`, alrededor de todo el bucle:** `KeyboardInterrupt` (Ctrl+C) y
+  `EOFError` (Ctrl+D o fin de la entrada), para salir limpiamente.
 
 **Fuera de alcance:** el estado vive en memoria y se pierde al cerrar el
 programa. El contador no se reinicia cada día. No hay cancelación, gestión de

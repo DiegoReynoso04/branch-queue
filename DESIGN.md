@@ -198,8 +198,18 @@ the customer is announced only after that claim has succeeded.
 | Two tickets with the same `issued_at` | Order comes from the position in the deque, which follows the number, not the time. `issued_at` is for display only. |
 | Very large counter | Python `int` has no upper limit. |
 
-Unexpected errors are not hidden: the CLI only catches `InvalidServiceError`,
-`EmptyQueueError` and `ValueError`, never `Exception`.
+Unexpected errors are not hidden. The CLI catches only these exceptions, in
+three `try` blocks, and never `Exception`, so a real bug still shows its
+traceback:
+
+- **`run()`, around each menu action:** `InvalidServiceError`, then
+  `EmptyQueueError`, then `ValueError`. `InvalidServiceError` must come before
+  `ValueError` because it is a subclass of `ValueError`. In the opposite order
+  the `except ValueError` clause would catch it first.
+- **`_ask_service()`:** `InvalidServiceError`, to show the error and ask for the
+  service again.
+- **`run()`, around the whole loop:** `KeyboardInterrupt` (Ctrl+C) and
+  `EOFError` (Ctrl+D or end of input), to exit cleanly.
 
 **Out of scope:** the state lives in memory and is lost when the program closes.
 The counter does not reset each day. There is no cancellation, no-show handling

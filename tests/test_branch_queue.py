@@ -210,6 +210,14 @@ class NormalizeServiceTests(unittest.TestCase):
                 with self.assertRaises(bq.InvalidServiceError):
                     bq.normalize_service(value)
 
+    def test_non_string_kept_as_is_and_quoted_once(self) -> None:
+        for value, shown in ((None, "None"), (42, "42")):
+            with self.subTest(value=value):
+                with self.assertRaises(bq.InvalidServiceError) as ctx:
+                    bq.normalize_service(value)  # type: ignore[arg-type]
+                self.assertIs(ctx.exception.service, value)
+                self.assertIn(f"Servicio inválido: {shown}.", str(ctx.exception))
+
 
 class BranchQueueCLITests(unittest.TestCase):
     def run_cli(self, answers: list[str]) -> tuple[ScriptedIO, "bq.BranchQueue"]:
@@ -245,6 +253,15 @@ class BranchQueueCLITests(unittest.TestCase):
         self.assertEqual(io.prompts.count("Servicio (número o nombre): "), 2)
         self.assertEqual(queue.stats()["total"], 1)
         self.assertEqual(queue.peek_next("retiro").client_name, "Ana López")
+
+    def test_unicode_digits_reprompt_service(self) -> None:
+        # "²".isdigit() es True pero int("²") falla; "١" es un dígito árabe.
+        io, queue = self.run_cli(["1", "Ana", "²", "١", "2", "0"])
+        self.assertIn("Servicio inválido: '²'", io.text)
+        self.assertIn("Servicio inválido: '١'", io.text)
+        self.assertEqual(io.prompts.count("Servicio (número o nombre): "), 3)
+        self.assertEqual(queue.stats()["total"], 1)
+        self.assertEqual(queue.peek_next("retiro").client_name, "Ana")
 
     def test_exhausted_answers_end_like_ctrl_d(self) -> None:
         io, _ = self.run_cli(["5"])

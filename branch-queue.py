@@ -17,7 +17,7 @@ VALID_SERVICES: tuple[str, ...] = ("deposito", "retiro", "gestion_cuenta")
 class InvalidServiceError(ValueError):
     """El tipo de servicio solicitado no existe en la sucursal."""
 
-    def __init__(self, service: str) -> None:
+    def __init__(self, service: object) -> None:
         self.service = service
         self.valid_services = VALID_SERVICES
         super().__init__(
@@ -40,7 +40,7 @@ def normalize_service(service_type: str) -> str:
     Lanza InvalidServiceError si no es uno de VALID_SERVICES.
     """
     if not isinstance(service_type, str):
-        raise InvalidServiceError(repr(service_type))
+        raise InvalidServiceError(service_type)
     normalized = service_type.strip().lower()
     if normalized not in VALID_SERVICES:
         raise InvalidServiceError(service_type)
@@ -142,6 +142,10 @@ class BranchQueueCLI:
         "0. Salir"
     )
 
+    SERVICE_BY_NUMBER: dict[str, str] = {
+        str(number): service for number, service in enumerate(VALID_SERVICES, start=1)
+    }
+
     def __init__(
         self,
         queue: BranchQueue | None = None,
@@ -203,8 +207,8 @@ class BranchQueueCLI:
             self._output(f"  {index}. {service}")
         while True:
             answer = self._input("Servicio (número o nombre): ").strip()
-            if answer.isdigit() and 1 <= int(answer) <= len(VALID_SERVICES):
-                return VALID_SERVICES[int(answer) - 1]
+            if answer in self.SERVICE_BY_NUMBER:
+                return self.SERVICE_BY_NUMBER[answer]
             try:
                 return normalize_service(answer)
             except InvalidServiceError as error:
